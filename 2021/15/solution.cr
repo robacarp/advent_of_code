@@ -95,7 +95,7 @@ class Survivor
 
   def go_forth()
     distances = Hash(Int32,Array(Point)).new
-    visited = [] of Point
+    visited = Set(Point).new
     infinity = width * height
 
     [0, infinity].each do |n|
@@ -183,6 +183,7 @@ end
 puts "(took #{duration})"
 
 puts "="*80
+puts "Expanding..."
 
 width = data.first.size
 height = data.size
@@ -210,6 +211,12 @@ d.each.with_index do |row, i|
   end
 end
 
+puts "="*80
+
 survivor = Survivor.new d5
-solution = survivor.go_forth
-puts "Least cost path to solution: #{solution}"
+duration = Time.measure do
+  solution = survivor.go_forth
+  puts "Least cost path to solution: #{solution}"
+end
+
+puts "(took #{duration})"
