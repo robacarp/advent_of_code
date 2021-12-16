@@ -69,7 +69,7 @@ class Location
 
   def initialize(@value)
     @visited = false
-    @arrival_cost = -1
+    @arrival_cost = Int32::MAX
     @path = [] of Point
   end
 
@@ -94,6 +94,29 @@ class Location
   end
 end
 
+class Queue(IndexT, ValueT)
+  def initialize
+    @data = Hash(IndexT, Array(ValueT)).new { |h,k| h[k] = [] of ValueT }
+    @keys_with_data = Set(IndexT).new
+  end
+
+  def pop : Tuple(IndexT, ValueT)?
+    first_key = @keys_with_data.min?
+
+    return nil unless first_key
+    value = @data[first_key].shift
+
+    @keys_with_data.delete first_key if @data[first_key].none?
+
+    {first_key, value}
+  end
+
+  def insert(value : ValueT, at position : IndexT)
+    @keys_with_data << position
+    @data[position] << value
+  end
+end
+
 class Survivor
   getter data
   getter width : Int32
@@ -105,29 +128,22 @@ class Survivor
   end
 
   def go_forth()
-    distances = Hash(Int32,Array(Point)).new
-    infinity = Int32::MAX
-
-    [0, infinity].each do |n|
-      distances[n] = Array(Point).new
-    end
+    queue = Queue(Int32, Point).new
+    infinity = Int32::MAX - 1
 
     start = Point.new(0,0)
-    distances[0] << start
+    queue.insert start, at: 0
     self[start].arrival_cost = 0
 
     each_point do |x,y|
-      distances[infinity] << Point.new(x,y)
+      queue.insert Point.new(x,y), at: infinity
     end
 
     loop do
-      break if distances.empty?
+      pop = queue.pop
+      break unless pop
 
-      distance = distances.keys.min
-      points = distances[distance]
-
-      position = points.shift
-      distances.delete distance if points.none?
+      distance, position = pop
 
       location = self[position]
       next if location.visited
@@ -136,8 +152,8 @@ class Survivor
 
       location.visited = true
       location.arrival_cost = distance
-      location.path = position.path.dup
-      location.path << position
+      # location.path = position.path.dup
+      # location.path << position
 
       {
         Point.new(position.x + 1, position.y),
@@ -147,12 +163,11 @@ class Survivor
       }.each do |point|
         next if point.x >= width || point.y >= height || point.x < 0 || point.y < 0
 
-        point.path = position.path.dup
-        point.path << position
+        # point.path = position.path.dup
+        # point.path << position
 
         calculated_distance = distance + self[point].value
-        distances[calculated_distance] ||= Array(Point).new
-        distances[calculated_distance] << point
+        queue.insert point, at: calculated_distance
       end
     end
   end
@@ -225,14 +240,13 @@ duration = Time.measure do
 end
 
 finish = survivor.finish
-puts "Least cost path to solution: #{finish.arrival_cost}"
-yolo "Path: #{finish.path}"
+puts "Least cost to solution: #{finish.arrival_cost}"
 
 puts "(took #{duration})"
-survivor.mark_path finish.path
+# survivor.mark_path finish.path
 
 yolo survivor.value_map
-puts "="*8
+yolo "="*8
 yolo survivor.cost_map
 
 puts "="*80
@@ -272,12 +286,12 @@ duration = Time.measure do
 end
 
 finish = survivor.finish
-puts "Least cost path to solution: #{finish.arrival_cost}"
-yolo "Path: #{finish.path}"
+puts "Least cost to solution: #{finish.arrival_cost}"
+# yolo "Path: #{finish.path}"
 
 puts "(took #{duration})"
 
-survivor.mark_path finish.path
+# survivor.mark_path finish.path
 
 yolo survivor.value_map
 yolo survivor.cost_map
