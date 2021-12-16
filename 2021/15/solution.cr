@@ -1,7 +1,7 @@
 require "colorize"
 require "big"
 
-TESTING = true
+TESTING = false
 
 data = if TESTING
   File.read_lines("testing.txt")
@@ -18,8 +18,16 @@ end
 struct Point
   property x : Int32
   property y : Int32
+  property path : Array(self)
+  property total_cost : Int32
 
   def initialize(@x, @y)
+    @path = [] of self
+    @total_cost = Int32::MAX
+  end
+
+  def total_cost=(val : Int32)
+    @total_cost = val if @total_cost > val
   end
 
   def ==(other)
@@ -31,8 +39,14 @@ struct Point
     io << x
     io << ','
     io << y
+    if total_cost < Int32::MAX
+      io << ' '
+      io << total_cost
+    end
     io << ')'
   end
+
+  delegate inspect, to: to_s
 
   def clone
     self.class.new x, y
@@ -48,29 +62,26 @@ struct Point
 end
 
 class Location
-  property total_cost : Int32
+  property arrival_cost : Int32
   property value : Int32
   property visited : Bool
+  property path : Array(Point)
 
   def initialize(@value)
     @visited = false
-    @total_cost = 0
-    @total_cost_set = false
+    @arrival_cost = -1
+    @path = [] of Point
   end
 
-  def total_cost=(val : Int32)
-    if @total_cost_set
-      if total_cost > val
-        @total_cost = val
-      end
+  def cost_s(io : IO)
+    if visited
+      io << arrival_cost.to_s(precision: 2).colorize.green
     else
-      @total_cost = val
+      io << arrival_cost.to_s(precision: 2)
     end
-
-    @total_cost_set = true
   end
 
-  def to_s(io : IO)
+  def value_s(io : IO)
     if visited
       io << value.to_s(precision: 2).colorize.green
     else
@@ -88,17 +99,14 @@ class Survivor
   getter width : Int32
   getter height : Int32
 
-  getter destination : Point
-
   def initialize(@data : Array(Array(Location)))
     @width = data.first.size
     @height = data.size
-    @destination = Point.new(@width - 1, @height - 1)
   end
 
   def go_forth()
     distances = Hash(Int32,Array(Point)).new
-    infinity = width * height
+    infinity = Int32::MAX
 
     [0, infinity].each do |n|
       distances[n] = Array(Point).new
@@ -106,7 +114,7 @@ class Survivor
 
     start = Point.new(0,0)
     distances[0] << start
-    self[start].total_cost = 0
+    self[start].arrival_cost = 0
 
     each_point do |x,y|
       distances[infinity] << Point.new(x,y)
@@ -123,7 +131,13 @@ class Survivor
 
       location = self[position]
       next if location.visited
+
+      # yolo "at d=#{distance}, p=#{position}, path: #{position.path}"
+
       location.visited = true
+      location.arrival_cost = distance
+      location.path = position.path.dup
+      location.path << position
 
       {
         Point.new(position.x + 1, position.y),
@@ -133,24 +147,35 @@ class Survivor
       }.each do |point|
         next if point.x >= width || point.y >= height || point.x < 0 || point.y < 0
 
+        point.path = position.path.dup
+        point.path << position
+
         calculated_distance = distance + self[point].value
         distances[calculated_distance] ||= Array(Point).new
         distances[calculated_distance] << point
-
-        self[point].total_cost = calculated_distance
       end
     end
+  end
 
-    finish = Point.new(width-1, height-1)
-
-    self[finish].total_cost
+  def finish
+    self[Point.new(width-1, height-1)]
   end
 
   def each_point
     @data.each.with_index do |row, y|
-      row.each.with_index do |value, x|
-        yield x,y,value
+      row.each.with_index do |location, x|
+        yield x,y,location
       end
+    end
+  end
+
+  def mark_path(path : Array(Point))
+    each_point do |_,_,location|
+      location.visited = false
+    end
+
+    path.each do |point|
+      self[point].visited = true
     end
   end
 
@@ -165,6 +190,26 @@ class Survivor
       io << ' '
     end
   end
+
+  def cost_map
+    String.build do |io|
+      each_point do |x, y, location|
+        io << '\n' if x == 0 && y > 0
+        location.cost_s(io)
+        io << ' '
+      end
+    end
+  end
+
+  def value_map
+    String.build do |io|
+      each_point do |x, y, location|
+        io << '\n' if x == 0 && y > 0
+        location.value_s(io)
+        io << ' '
+      end
+    end
+  end
 end
 
 d = data.map do |row|
@@ -176,11 +221,19 @@ end
 survivor = Survivor.new d
 
 duration = Time.measure do
-  solution = survivor.go_forth
-  puts "Least cost path to solution: #{solution}"
+  survivor.go_forth
 end
 
+finish = survivor.finish
+puts "Least cost path to solution: #{finish.arrival_cost}"
+yolo "Path: #{finish.path}"
+
 puts "(took #{duration})"
+survivor.mark_path finish.path
+
+yolo survivor.value_map
+puts "="*8
+yolo survivor.cost_map
 
 puts "="*80
 puts "Expanding..."
@@ -188,18 +241,18 @@ puts "Expanding..."
 width = data.first.size
 height = data.size
 
-d5 = Array(Array(Location)).new(height * 6) do 
-  Array(Location).new(width * 6) do
+d5 = Array(Array(Location)).new(height * 5) do 
+  Array(Location).new(width * 5) do
     Location.new(0)
   end
 end
 
 d.each.with_index do |row, i|
   row.each.with_index do |location, j|
-    d5[i][j] = location.dup
+    d5[i][j] = location.clone
 
-    (0..5).each do |multiplier|
-      (0..5).each do |j_multiplier|
+    (0...5).each do |multiplier|
+      (0...5).each do |j_multiplier|
         new_location = location.clone.tap{|l| l.value += multiplier + j_multiplier}
         if new_location.value > 9
           new_location.value = new_location.value % 9
@@ -215,11 +268,16 @@ puts "="*80
 
 survivor = Survivor.new d5
 duration = Time.measure do
-  solution = survivor.go_forth
-  puts "Least cost path to solution: #{solution}"
+  survivor.go_forth
 end
+
+finish = survivor.finish
+puts "Least cost path to solution: #{finish.arrival_cost}"
+yolo "Path: #{finish.path}"
 
 puts "(took #{duration})"
 
-yolo survivor
+survivor.mark_path finish.path
 
+yolo survivor.value_map
+yolo survivor.cost_map
