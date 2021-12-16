@@ -1,10 +1,10 @@
 require "colorize"
 require "big"
 
-TESTING = false
+TESTING = true
 
 data = if TESTING
-  File.read_lines("testing2.txt")
+  File.read_lines("testing.txt")
 else
   File.read_lines("input.txt")
 end
@@ -50,16 +50,19 @@ end
 class Location
   property total_cost : Int32
   property value : Int32
+  property visited : Bool
 
   def initialize(@value)
-    @chosen = false
+    @visited = false
     @total_cost = 0
     @total_cost_set = false
   end
 
   def total_cost=(val : Int32)
     if @total_cost_set
-      @total_cost = [total_cost, val].min
+      if total_cost > val
+        @total_cost = val
+      end
     else
       @total_cost = val
     end
@@ -68,11 +71,11 @@ class Location
   end
 
   def to_s(io : IO)
-    io << total_cost.to_s(precision: 2)
-  end
-
-  def inspect(io : IO)
-    io << value.to_s(precision: 2)
+    if visited
+      io << value.to_s(precision: 2).colorize.green
+    else
+      io << value.to_s(precision: 2)
+    end
   end
 
   def clone
@@ -95,14 +98,15 @@ class Survivor
 
   def go_forth()
     distances = Hash(Int32,Array(Point)).new
-    visited = Set(Point).new
     infinity = width * height
 
     [0, infinity].each do |n|
-      distances[n] = [] of Point
+      distances[n] = Array(Point).new
     end
 
-    distances[0] << Point.new(0,0)
+    start = Point.new(0,0)
+    distances[0] << start
+    self[start].total_cost = 0
 
     each_point do |x,y|
       distances[infinity] << Point.new(x,y)
@@ -111,43 +115,41 @@ class Survivor
     loop do
       break if distances.empty?
 
-      distance, points = distances.min
+      distance = distances.keys.min
+      points = distances[distance]
 
       position = points.shift
       distances.delete distance if points.none?
 
-      next if visited.includes? position
-      visited << position
+      location = self[position]
+      next if location.visited
+      location.visited = true
 
-      options = [
+      {
         Point.new(position.x + 1, position.y),
         Point.new(position.x, position.y + 1),
         Point.new(position.x - 1, position.y),
         Point.new(position.x, position.y - 1),
-      ].reject do |point|
-        point.x >= width || point.y >= height || point.x < 0 || point.y < 0
-      end
+      }.each do |point|
+        next if point.x >= width || point.y >= height || point.x < 0 || point.y < 0
 
-      next if options.none?
-
-      options.each do |point|
-        calculated_distance = distance + self.[point].value
-        distances[calculated_distance] ||= [] of Point
+        calculated_distance = distance + self[point].value
+        distances[calculated_distance] ||= Array(Point).new
         distances[calculated_distance] << point
 
         self[point].total_cost = calculated_distance
       end
     end
 
-    finish = Point.new(width-1,height-1)
+    finish = Point.new(width-1, height-1)
 
-    self[finish]
+    self[finish].total_cost
   end
 
   def each_point
     @data.each.with_index do |row, y|
       row.each.with_index do |value, x|
-        yield x,y
+        yield x,y,value
       end
     end
   end
@@ -157,12 +159,10 @@ class Survivor
   def []=(x,y,v) ; @data[y][x] = v ; end
 
   def to_s(io : IO)
-    @data.each.with_index do |row, y|
-      row.each.with_index do |value, x|
-        io << value
-        io << ' '
-      end
-      io << '\n'
+    each_point do |x, y, value|
+      io << '\n' if x == 0 && y > 0
+      io << value
+      io << ' '
     end
   end
 end
@@ -200,7 +200,7 @@ d.each.with_index do |row, i|
 
     (0..5).each do |multiplier|
       (0..5).each do |j_multiplier|
-        new_location = location.dup.tap{|l| l.value += multiplier + j_multiplier}
+        new_location = location.clone.tap{|l| l.value += multiplier + j_multiplier}
         if new_location.value > 9
           new_location.value = new_location.value % 9
         end
@@ -220,3 +220,6 @@ duration = Time.measure do
 end
 
 puts "(took #{duration})"
+
+yolo survivor
+
