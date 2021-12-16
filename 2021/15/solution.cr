@@ -117,8 +117,6 @@ class Survivor
       distances.delete distance if points.none?
 
       next if visited.includes? position
-
-      # yolo "at #{distance}, chose #{position} "
       visited << position
 
       options = [
@@ -129,8 +127,6 @@ class Survivor
       ].reject do |point|
         point.x >= width || point.y >= height || point.x < 0 || point.y < 0
       end
-
-      # yolo "calculating distances for #{options}"
 
       next if options.none?
 
@@ -146,12 +142,6 @@ class Survivor
     finish = Point.new(width-1,height-1)
 
     self[finish]
-  end
-
-  def mark(path : Array(Point))
-    path.each do |point|
-      self.[point].chosen = true
-    end
   end
 
   def each_point
@@ -192,7 +182,6 @@ end
 
 puts "(took #{duration})"
 
-# yolo survivor
 puts "="*80
 
 width = data.first.size
