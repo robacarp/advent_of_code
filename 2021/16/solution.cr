@@ -1,17 +1,4 @@
-require "colorize"
-require "big"
-
-TESTING = false
-
-def only_testing
-  yield if true #TESTING
-end
-
-def yolo(*args)
-  only_testing do
-    puts *args
-  end
-end
+require "../kit"
 
 abstract class Packet
   getter version : Int32
@@ -128,34 +115,45 @@ class Message
   delegate version_sum, value, to: @packet
 end
 
-m = Message.new("D2FE28").packet
-puts "#{m.version}.should be(6)"
-puts "#{m.type}.should be(4)"
-puts "#{m.as(ValuePacket).value}.should be 2021"
 
-Message.new("EE00D40C823060")
-Message.new("38006F45291200")
-puts "should be 16 #{Message.new("8A004A801A8002F478").version_sum}"
-puts "should be 12 #{Message.new("620080001611562C8802118E34").version_sum}"
-puts "should be 23 #{Message.new("C0015000016115A2E0802F182340").version_sum}"
-puts "should be 31 #{Message.new("A0016C880162017C3686B18A3D4780").version_sum}"
+puzzle "PacketDecoder" do
+  test "16" { "8A004A801A8002F478" }
+  test "12" { "620080001611562C8802118E34" }
+  test "23" { "C0015000016115A2E0802F182340" }
+  test "31" { "A0016C880162017C3686B18A3D4780" }
 
-puts "should be 3 #{Message.new("C200B40A82").value}"
-puts "should be 54 #{Message.new("04005AC33890").value}"
-puts "should be 7 #{Message.new("880086C3E88112").value}"
-puts "should be 9 #{Message.new("CE00C43D881120").value}"
-puts "should be 1 #{Message.new("D8005AC2A8F0").value}"
-puts "should be 0 #{Message.new("F600BC2D8F").value}"
-puts "should be 0 #{Message.new("9C005AC2F8F0").value}"
-puts "should be 1 #{Message.new("9C0141080250320F1802104A08").value}"
+  input do
+    File.read_lines("input.txt").join
+  end
 
-data = if TESTING
-  File.read_lines("testing.txt")
-else
-  File.read_lines("input.txt")
+  output do |value|
+    "Message Version Sum: #{value}"
+  end
+
+  solve do |input|
+    Message.new(input).version_sum
+  end
 end
 
-message = Message.new data.join
-puts "Message Version Sum: #{message.version_sum}"
-puts "Message Value : #{message.value}"
+puzzle "PacketDecoderValue" do
+  test "3" { "C200B40A82" }
+  test "54" { "04005AC33890" }
+  test "7" { "880086C3E88112" }
+  test "9" { "CE00C43D881120" }
+  test "1" { "D8005AC2A8F0" }
+  test "0" { "F600BC2D8F" }
+  test "0" { "9C005AC2F8F0" }
+  test "1" { "9C0141080250320F1802104A08" }
 
+  input do
+    File.read_lines("input.txt").join
+  end
+
+  output do |value|
+    "Message Value: #{value}"
+  end
+
+  solve do |input|
+    Message.new(input).value
+  end
+end
