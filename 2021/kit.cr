@@ -36,10 +36,23 @@ class Puzzle
   def self.run_tests : Bool
     true
   end
+
+  def self.xputs(*args)
+    print " #  ".colorize.bold
+    puts *args
+  end
+
+  delegate xputs, to: self.class
 end
 
 at_exit do
   Puzzle.run_all_puzzles
+rescue e
+  puts
+  puts e.message
+  e.backtrace.each do |frame|
+    puts frame
+  end
 end
 
 macro puzzle(name)
@@ -48,18 +61,24 @@ macro puzzle(name)
 
     def self.run_tests : Bool
       all_passed = true
-      puts "Running tests from #{self.name}:"
+      xputs "Running tests from #{self.name}:"
 
       TESTS.each do |expected, input|
-        print "\ttesting #{input[0..12]}: "
-        actual = solution(input).to_s
+        xputs "\ttesting #{input[0..12]}: "
+        actual = ""
+
+        duration = Time.measure do
+          actual = solution(input).to_s
+        end
 
         if expected == actual
-          puts "pass!".colorize.green
+          xputs "pass! ".colorize.green
+          xputs "took #{duration}"
           all_passed &= true
         else
-          puts "fail!".colorize.red
-          puts "#{input} should have generated #{expected} but #{actual} was generated instead"
+          xputs "fail!".colorize.red
+          xputs "#{input} should have generated #{expected} but #{actual} was generated instead"
+          xputs "took #{duration}"
           all_passed = false
         end
       end
