@@ -13,19 +13,9 @@ class Point
 
   def_hash @x, @y
 
-  def to_s(io : IO)
-    io << "("
-    io << x
-    io << ","
-    io << y
-    io << ")"
-  end
-
   def adjust(by : self)
     self.class.new(x + by.x, y + by.y)
   end
-
-  delegate inspect, to: to_s
 end
 
 alias Velocity = Point
@@ -87,6 +77,7 @@ class Trajectory
   def initialize(velocity : Point, @target)
     @velocity = velocity.dup
     @points = [] of Point
+    fire
   end
 
   def fire
@@ -97,7 +88,6 @@ class Trajectory
         break if overshot?
         break if successful?
         break if undershot?
-        break if indeterminate_miss?
       end
 
       points << probe.next
@@ -106,30 +96,16 @@ class Trajectory
 
   def overshot? : Bool
     max_x = target[0].max
-    points_in_y_window = points.select {|p| target[1].includes? p.y}
-    return false if points_in_y_window.none?
-    sample_point = points_in_y_window.first
+    sample_point = points.last
     sample_point.x > max_x
   end
 
   def undershot? : Bool
-    points_in_y_window = points.select {|p| target[1].includes? p.y}
-    min_x = target[0].min
-    return false if points_in_y_window.none?
-    sample_point = points_in_y_window.first
-    sample_point.x < min_x
-  end
-
-  def indeterminate_miss? : Bool
     return false unless points.size > 2
     p1, p2 = points.last(2)
-    # the probe must be moving down
-    return false unless p1.y > p2.y
-
-    # is the last point below the target boundary?
-    sample_point = points.last
-    min_y = target[1].min
-    sample_point.y < min_y
+    # the probe must have exhausted horizontal inertia
+    return false unless p1.x == p2.x
+    return p2.y < target[1].min
   end
 
   def successful? : Bool
@@ -176,30 +152,10 @@ class Trajectory
     points.sort_by(&.y).last
   end
 
-  def inspect(io : IO)
-    io << "<max:"
-    io << highest_point.y
-    io << " hit".colorize.red if successful?
-    io << " points:"
-    io << points.size
-    io << " velocity:"
-    io << velocity
-    io << " sort_key:"
-    io << sort_key
-    io << ">"
-  end
-
   delegate to_s, to: inspect
-
-  def debug
-    height = highest_point.y
-    width
-  end
 end
 
-class Solver
-  BREAKPOINT = 10000
-
+class OptimizingSolver
   getter target : {CoordRange, CoordRange}
   getter solutions
   getter attempted_velocities
@@ -213,7 +169,6 @@ class Solver
 
   def solve
     best = Trajectory.new @initial_velocity, target
-    best.fire
 
     trajectories = [] of Trajectory
     increments = [ Point.new(2,1), Point.new(1,1), Point.new(1,2) ]
@@ -231,7 +186,6 @@ class Solver
       end
 
       trajectories.each do |trajectory|
-        trajectory.fire
         solutions << trajectory if trajectory.successful?
       end
 
@@ -286,7 +240,7 @@ puzzle "TrickShot" do
   solve do |input|
     _, area = input.split ": "
     x_range, y_range = area.split(", ").map(&.split('=').last).map { |string_range| Range.from_s string_range }
-    s = Solver.new({x_range, y_range})
+    s = OptimizingSolver.new({x_range, y_range})
     s.solve
     puts "solver found #{s.solutions.size} correct solutions."
     best = s.sorted_solutions.last
@@ -294,3 +248,38 @@ puzzle "TrickShot" do
   end
 end
 
+class BulkSolver < OptimizingSolver
+  def solve
+    x_range = (0..target[0].end)
+
+    # increased y max until the final number stopped increasing
+    y_range = (target[1].begin..199)
+
+    x_range.each do |x|
+      y_range.each do |y|
+        t = Trajectory.new Velocity.new(x,y), target
+        solutions << t if t.successful?
+      end
+    end
+  end
+end
+
+puzzle "InfinitePossibilities" do
+  test "112" do
+    "target area: x=20..30, y=-10..-5"
+  end
+
+  input do
+    "target area: x=57..116, y=-198..-148"
+  end
+
+  solve do |input|
+    puts input
+    _, area = input.split ": "
+    x_range, y_range = area.split(", ").map(&.split('=').last).map { |string_range| Range.from_s string_range }
+    s = BulkSolver.new({x_range, y_range})
+    s.solve
+    puts "solver found #{s.solutions.size} correct solutions."
+    s.solutions.size
+  end
+end
