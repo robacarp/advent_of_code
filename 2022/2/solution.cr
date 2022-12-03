@@ -76,12 +76,17 @@ class RockPaperScissors
   end
 end
 
-AOC["total_score"].do do
+AOC(Int32)["total_score"].do do
   assert_equal 15, RockPaperScissors.new(sample).step_1
-  display_solution RockPaperScissors.new(input).step_1
+  solve do
+    solution RockPaperScissors.new(input).step_1
+  end
 end
 
-AOC["total_score"].do do
+AOC(Int32)["total_score"].do do
   assert_equal 12, RockPaperScissors.new(sample).step_2
-  display_solution RockPaperScissors.new(input).step_2
+
+  solve do
+    solution RockPaperScissors.new(input).step_2
+  end
 end

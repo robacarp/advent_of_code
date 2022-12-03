@@ -58,21 +58,23 @@ class SackGroup
   end
 end
 
-AOC["collision priority"].do do
+AOC(Int32)["collision priority"].do do
   sacks = sample.lines.map do |inventory|
     Rucksack.new inventory
   end
 
   assert_equal 157, sacks.map(&.collision_priority).sum
 
-  sacks = input.lines.map do |inventory|
-    Rucksack.new inventory
-  end
+  solve do
+    sacks = input.lines.map do |inventory|
+      Rucksack.new inventory
+    end
 
-  display_solution sacks.map(&.collision_priority).sum
+    solution sacks.map(&.collision_priority).sum
+  end
 end
 
-AOC["badge priority"].do do
+AOC(Int32)["badge priority"].do do
   groups = sample.lines.map do |inventory|
     Rucksack.new inventory
   end.each_slice(3).map do |sacks|
@@ -81,11 +83,13 @@ AOC["badge priority"].do do
 
   assert_equal 70, groups.map(&.badge_priority).sum
 
-  groups = input.lines.map do |inventory|
-    Rucksack.new inventory
-  end.each_slice(3).map do |sacks|
-    SackGroup.new sacks
-  end
+  solve do
+    groups = input.lines.map do |inventory|
+      Rucksack.new inventory
+    end.each_slice(3).map do |sacks|
+      SackGroup.new sacks
+    end
 
-  display_solution groups.map(&.badge_priority).sum
+    solution groups.map(&.badge_priority).sum
+  end
 end
