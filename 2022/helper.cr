@@ -16,8 +16,9 @@ class AOC
 
   def assert_equal(expected, actual)
     ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
-    raise ok.to_s unless expected == actual
-    puts "#{title}: #{actual} (#{ok})"
+    message = "#{title}: #{actual} (#{ok})"
+    raise message unless expected == actual
+    puts message
   end
 
   def display_solution(value)
