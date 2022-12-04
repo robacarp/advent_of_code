@@ -30,6 +30,16 @@ class AOC(SolutionType)
     @solution = s
   end
 
+  def refute(condition : Bool)
+    assert ! condition
+  end
+
+  def assert(condition : Bool)
+    ok = "NOTOK".colorize.red
+    raise "#{ok} failed condition" unless condition
+    puts "OK".colorize.green
+  end
+
   def assert_equal(expected, actual)
     ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
     raise "expected #{expected} but got #{actual}" unless expected == actual
