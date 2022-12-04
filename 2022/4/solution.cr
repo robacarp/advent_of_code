@@ -42,13 +42,7 @@ class CleanupPairs
 
   def overlapping_pairs : Int32
     @pairs.select do |pair|
-      if pair[0].any_overlap?(pair[1])
-        puts "#{pair[0]} overlaps #{pair[1]}"
-        true
-      else
-        puts "#{pair[0]} no overlap #{pair[1]}"
-        false
-      end
+      pair[0].any_overlap?(pair[1])
     end.size
   end
 end

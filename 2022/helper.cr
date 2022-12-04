@@ -10,6 +10,7 @@ class AOC(SolutionType)
   end
 
   def initialize(@title : String)
+    @had_tests = false
   end
 
   def do
@@ -37,17 +38,27 @@ class AOC(SolutionType)
   def assert(condition : Bool)
     ok = "NOTOK".colorize.red
     raise "#{ok} failed condition" unless condition
-    puts "OK".colorize.green
+    @had_tests = true
+    print ".".colorize.green
+  end
+
+  private def newline_if_tests
+    if @had_tests
+      @had_tests = false
+      "\n"
+    else
+      ""
+    end
   end
 
   def assert_equal(expected, actual)
     ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
     raise "expected #{expected} but got #{actual}" unless expected == actual
-    puts "#{title}: #{actual} (#{ok})"
+    puts "#{newline_if_tests}#{title}: #{actual} (#{ok})"
   end
 
   def display_solution(value)
-    puts "#{title.colorize.bold}: #{value}"
+    puts "#{newline_if_tests}#{title.colorize.bold}: #{value}"
     if took = @took
       seconds = took.total_seconds
 
