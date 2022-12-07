@@ -51,10 +51,10 @@ class AOC(SolutionType)
     end
   end
 
-  def assert_equal(expected, actual)
+  def assert_equal(expected, actual, message = "#{newline_if_tests}#{title}")
     ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
     raise "expected #{expected} but got #{actual}" unless expected == actual
-    puts "#{newline_if_tests}#{title}: #{actual} (#{ok})"
+    puts "#{message}: #{actual} (#{ok})"
   end
 
   def display_solution(value)
