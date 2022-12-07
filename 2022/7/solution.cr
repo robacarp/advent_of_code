@@ -89,8 +89,6 @@ module AoC
         when line =~ %r|^\$ cd /|
           current = root
 
-          # puts "navigating to root. pwd=#{current.path} i=#{i}"
-
         when line =~ /^\$ cd \.\./
           if parent = current.parent
             current = parent
@@ -98,29 +96,21 @@ module AoC
             raise "Cannot go up from root. pwd=#{current.path} i=#{i}"
           end
 
-          # puts "navigating up. pwd=#{current.path} i=#{i}"
         when line =~ /^\$ cd /
-          # change directory
-          # look for directory already existing?
           name = line.split(" ")[2]
-          # directory = Directory.new name, current
-          # current.push directory
+
           if next_dir = current.cd name
             current = next_dir
-            # puts "navigating to #{name}. pwd=#{current.path}"
           else
             raise "Cannot find directory #{name}"
           end
         when line =~ /^\$ ls/
-          # list directory
           # no-op
-        when line =~ /^\d+/
-          # file
+        when line =~ /^\d+/ # file
           size, name = line.split(" ")
           file = File.new name, size.to_i
           current.push file
-        when line =~ /^dir/
-          # directory
+        when line =~ /^dir/ # directory
           name = line.split(" ")[1]
           directory = Directory.new name, current
           current.push directory
@@ -138,10 +128,10 @@ AOC(Int32)["sum of directory sizes"].do do
   parser = AoC::InputParser.new(sample)
   root = parser.build_fs
 
-  assert_equal 584, root.cd("a").cd("e").size
-  assert_equal 94853, root.cd("a").size
-  assert_equal 24933642, root.cd("d").size
-  assert_equal 48381165, root.size
+  assert_equal 584, root.cd("a").cd("e").size, "size of /a/e"
+  assert_equal 94853, root.cd("a").size, "size of /a"
+  assert_equal 24933642, root.cd("d").size, "size of /d"
+  assert_equal 48381165, root.size, "size of /"
 
   small_enough = root.all_directories
     .select(&.size.<=(100000))
@@ -159,7 +149,7 @@ AOC(Int32)["sum of directory sizes"].do do
   end
 end
 
-AOC(Int32)["dir needed to eliminate"].do do
+AOC(Int32)["smallest dir which will free up enough space"].do do
   total_disk_size = 70000000
   update_required = 30000000
 
