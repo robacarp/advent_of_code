@@ -22,9 +22,7 @@ class AOC(SolutionType)
       yield
     end
 
-    if s = @solution
-      display_solution s
-    end
+    display_solution
   end
 
   def solution(s)
@@ -57,8 +55,10 @@ class AOC(SolutionType)
     puts "#{message}: #{actual} (#{ok})"
   end
 
-  def display_solution(value)
-    puts "#{newline_if_tests}#{title.colorize.bold}: #{value}"
+  def display_solution
+    return unless solution_ = @solution
+
+    puts "#{newline_if_tests}#{title.colorize.bold}: #{solution_}"
     if took = @took
       seconds = took.total_seconds
 
