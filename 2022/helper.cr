@@ -49,6 +49,29 @@ class AOC(SolutionType)
     end
   end
 
+  def assert_equal(expected : String, actual : String, message = "#{newline_if_tests}#{title}")
+    ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
+
+    unless expected == actual
+      newlines = expected.includes?("\n") || actual.includes?("\n")
+
+      message = String.build do |s|
+        s << ok
+        s << " "
+        s << "expected"
+        s << ":\n" if newlines
+        s << expected
+        s << "\n" if newlines
+        s << "but got"
+        s << ":\n" if newlines
+        s << actual
+      end
+
+      raise message
+    end
+    puts "#{message}: #{actual} (#{ok})"
+  end
+
   def assert_equal(expected, actual, message = "#{newline_if_tests}#{title}")
     ok = expected == actual ? "OK".colorize.green : "NOTOK".colorize.red
     raise "expected #{expected} but got #{actual}" unless expected == actual
@@ -58,7 +81,9 @@ class AOC(SolutionType)
   def display_solution
     return unless solution_ = @solution
 
-    puts "#{newline_if_tests}#{title.colorize.bold}: #{solution_}"
+    newline_if_newlines = solution_.to_s.includes?("\n") ? "\n" : ""
+
+    puts "#{newline_if_tests}#{title.colorize.bold}: #{newline_if_newlines}#{solution_}"
     if took = @took
       seconds = took.total_seconds
 
