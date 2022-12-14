@@ -1,5 +1,4 @@
 require "../helper"
-require "log"
 
 sample = <<-TEXT
 Monkey 0:
@@ -146,15 +145,6 @@ class MonkeyGame
     @monkeys.each &.play
   end
 end
-
-Log.setup(:warn,
-  Log::IOBackend.new(
-    dispatcher: Log::DispatchMode::Sync,
-    formatter: Log::Formatter.new { |log_entry, io|
-      io << "#{log_entry.severity} #{log_entry.source} #{log_entry.message}"
-    }
-  )
-)
 
 AOC(Int64)["monkey inspections"].do do
   relaxor = ->(worry_level : Monkey::Worry) { worry_level // 3 }

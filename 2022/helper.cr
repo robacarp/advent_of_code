@@ -1,4 +1,5 @@
 require "colorize"
+require "log"
 
 class AOC(SolutionType)
   getter title
@@ -107,3 +108,13 @@ end
 def input
   File.read "input.txt"
 end
+
+Log.setup(:warn,
+  Log::IOBackend.new(
+    dispatcher: Log::DispatchMode::Sync,
+    formatter: Log::Formatter.new { |log_entry, io|
+      # io << "#{log_entry.severity} #{log_entry.source} #{log_entry.message}"
+      io << log_entry.message
+    }
+  )
+)
