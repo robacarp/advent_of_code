@@ -13,8 +13,8 @@ sample = <<-TEXT
 [[4,4],4,4]
 [[4,4],4,4,4]
 
-[17,7,7,7]
-[17,7,7]
+[7,7,7,7]
+[7,7,7]
 
 []
 [3]
@@ -27,30 +27,26 @@ sample = <<-TEXT
 TEXT
 
 class Object
-  def compare(other : Nil, ts = 0) : Bool?
-    puts "#{tabs ts}[?/nil] right hand ran out, left hand is #{self}"
+  def compare(other : Nil) : Bool?
+    # puts "[?/nil] right hand ran out, left hand is #{self}"
     false
-  end
-
-  def tabs(ts = 0)
-    "   " * ts
   end
 end
 
 struct Int32
-  def compare(node : Node, ts = 0) : Bool?
+  def compare(node : Node) : Bool?
     node_self = Node.new self
-    puts "#{tabs ts}[i/N] comparing #{node_self} to #{node}"
-    node_self.compare node, ts.+(1)
+    # puts "[i/N] comparing #{node_self} to #{node}"
+    node_self.compare node
   end
 
-  def compare(other : self, ts = 0) : Bool?
+  def compare(other : self) : Bool?
     case
     when self < other
-      puts "#{tabs ts}[i/i] left hand is smaller than right hand, correct order"
+      # puts "[i/i] left hand is smaller than right hand, correct order"
       true
     when self > other
-      puts "#{tabs ts}[i/i] left hand is bigger than right hand, wrong order"
+      # puts "[i/i] left hand is bigger than right hand, wrong order"
       false
     else nil
     end
@@ -58,14 +54,8 @@ struct Int32
 end
 
 struct Nil
-  def compare(other : self, ts = 0) : Bool?
-    {% raise "did this happen?" %}
-    # puts "#{tabs ts}[nil/?] left hand ran out, right hand is #{other}"
-    # false
-  end
-
-  def compare(other, ts = 0) : Bool?
-    puts "#{tabs ts}[nil/?] left hand ran out, right hand isn't. true"
+  def compare(other) : Bool?
+    # puts "[nil/?] left hand ran out, right hand isn't. true"
     true
   end
 end
@@ -137,45 +127,21 @@ class Node
     io << ']'
   end
 
-  # If both values are integers, the lower integer should come first.
-  # - If the left integer is lower than the right integer, the inputs are in the right order.
-  # - If the left integer is higher than the right integer, the inputs are not in the right order.
-  # - Otherwise, the inputs are the same integer; continue checking the next part of the input.
-  #
-  # If both values are lists, compare the first value of each list, then the second value, and so on.
-  # - If the left list runs out of items first, the inputs are in the right order.
-  # - If the right list runs out of items first, the inputs are not in the right order. 
-  # - If the lists are the same length and no comparison makes a decision about the order, continue checking the next part of the input.
-  #
-  # If exactly one value is an integer, convert the integer to a list which contains that integer as its only value, then retry the comparison. 
-  # For example, if comparing [0,0,0] and 2, convert the right value to [2] (a list containing 2); the result is then found by instead comparing [0,0,0] and [2].
-  def compare(int : Int32, ts = 0) : Bool?
+  def compare(int : Int32) : Bool?
     node_int = self.class.new int
-    puts "#{tabs ts}[N/i] comparing #{self} to #{node_int}"
-    compare node_int, ts + 1
+    # puts "[N/i] comparing #{self} to #{node_int}"
+    compare node_int
   end
 
-  def compare(other : Node, ts = 0) : Bool?
-    # puts "#{tabs ts}[N] comparing #{self} to #{other}"
-
-    # ts += 1
-
-    # todo properly zip with nils
+  def compare(other : Node) : Bool?
+    # puts "[N] comparing #{self} to #{other}"
     other.children.zip?(children).each do |(right, left)|
-      puts "#{tabs ts}[*] comparing #{left} to #{right}"
-      comparison = left.compare(right, ts + 1)
+      # puts "[*] comparing #{left} to #{right}"
+      comparison = left.compare right
       return comparison unless comparison.nil?
     end
 
-    if size < other.size
-      puts "#{tabs ts}[N/N] left hand ran out, right order. true"
-      true
-    end
-
-    if size > other.size
-      puts "#{tabs ts}[N/N] right hand ran out, wrong order. false"
-      false
-    end
+    size.compare other.size
   end
 
   delegate size, to: @children
@@ -189,42 +155,65 @@ class Pair
   end
 
   def compare : Bool
-    puts "[Pr] comparing #{first} to #{second}"
-    bacon = first.compare(second, 1) || false
-    # puts "#{first}\t#{second} => #{bacon}"
-    bacon
+    # puts "[Pr] comparing #{first} to #{second}"
+    first.compare(second) || false
   end
 end
 
 class DistressParser
-  def initialize(input : String)
-    @pairs = Array(Pair).new
+  getter lines = [] of String
 
-    input.lines.reject {|l| l.blank? }.each_slice(2) do |(a, b)|
-      # puts a, b
-      @pairs << Pair.new Node.parse(a), Node.parse(b)
-    end
+  def initialize(input : String)
+    @lines = input.lines.reject(&.blank?)
   end
 
   def solve
-    @pairs.map(&.compare).map_with_index do |bool, index|
-      if bool
-        index + 1
-      else
-        nil
+    lines.each_slice(2)
+      .map { |(first, second)| Pair.new Node.parse(first), Node.parse(second) }
+      .map(&.compare).map_with_index do |bool, index|
+        if bool
+          index + 1
+        else
+          nil
+        end
       end
-    end
+  end
+
+  def solve2
+    added_lines = ["[[2]]", "[[6]]"]
+    added_lines.each { |line| lines << line }
+
+    sorted = lines.map { |str| Node.parse str }
+      .sort do |a, b|
+        if a.compare b ## in the right order
+          -1
+        else
+          1
+        end
+      end
+      .map(&.to_s)
+
+    added_lines.map { |line| (sorted.index(line) || 0) + 1 }.product
   end
 end
 
 AOC(Int32)["Ordered Packets"].do do
   parser = DistressParser.new(sample)
   solve = parser.solve
-  pp solve
   assert_equal 13, solve.compact.sum
 
   solve do
     solve = DistressParser.new(input).solve
     solution solve.compact.sum
+  end
+end
+
+AOC(Int32)["Sorted Packets"].do do
+  parser = DistressParser.new sample
+  assert_equal 140, parser.solve2
+
+  solve do
+    parser = DistressParser.new input
+    solution parser.solve2
   end
 end
